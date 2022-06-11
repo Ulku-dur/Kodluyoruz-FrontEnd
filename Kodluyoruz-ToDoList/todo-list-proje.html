@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Todo List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  </head>
+  <body>
+    <div class="container mt-3">
+      <div class="card row">
+        <div class="card-header">
+          Todo List
+        </div>
+        <div class="card-body">
+          <form id="todo-form">
+            <div class="form-floating mb-2">
+              <input type="text" class="form-control" id="todo" name="todo" placeholder="Bir Todo Ekleyin" autocomplete="off">
+              <label for="todo">Bir Todo Ekleyin</label>
+            </div>
+            <button class="btn btn-danger">
+              Todo Ekle
+            </button>
+          </form>
+        </div>
+        <div class="card-body">
+          <h4 class="card-title" id="task-title">
+            Todolar
+          </h4>
+          <div class="form-floating">
+            <input type="text" class="form-control" id="filter" name="filter" placeholder="Bir Todo Arayın">
+            <label for="filter">Bir Todo Arayın</label>
+          </div>
+          <hr>
+          <ul class="list-group">
+            
+            
+          </ul><br>
+          <a href="#" id="clear-todos" class="clear-todos btn btn-dark">
+            Tüm Taskları Temizleyin
+          </a> 
+        </div>
+      </div>
+    </div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="showAlert">
+      
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        //Todo list Project
+        //-----------------------------------
+        //Element erişim
+        const form = document.querySelector("#todo-form");
+        const todoInput = document.querySelector("#todo");
+        const todoList = document.querySelector(".list-group");
+        const firtCardBody = document.querySelectorAll(".card-body")[0];
+        const secondCardBody = document.querySelectorAll(".card-body")[1];
+        const filter = document.querySelector("#filter");
+        const clearButton = document.querySelector("#clear-todos");
+        //Element erişim
+
+        eventListener();
+
+        function eventListener(){
+            // eventler burada yazılacak.
+            document.addEventListener("DOMContentLoaded",LoadAllTodosToUI);
+            form.addEventListener("submit",addTodo);
+            secondCardBody.addEventListener("click",deleteTodo);
+            clearButton.addEventListener("click",clearAllTodos);
+            filter.addEventListener("keyup",filterTodos);
+        }
+
+        function LoadAllTodosToUI(e){
+          let todos = getTodosFromStorage();
+          todos.forEach(function(todo){
+            addTodoToUI(todo);
+          });
+        }
+
+        function addTodo(e){
+          const newTodo = todoInput.value.trim();
+          if(newTodo == ""){
+            showAlert("danger","Todo alanı boş olamaz!");
+          }else{
+            if(checkTodoFromStorage(newTodo) == 0){
+              addTodoToUI(newTodo);
+              addTodoToStorage(newTodo);
+              showAlert("success","Todo başarılı olarak eklendi");
+              todoInput.value = "";
+            }else{
+              showAlert("danger",`${newTodo} daha önce eklediniz!`);
+            }
+          }
+
+          e.preventDefault();
+        }
+
+        function deleteTodo(e){
+          if(e.target.className == "fa fa-remove"){
+            let li = e.target.parentElement.parentElement;
+            let deleteTodo = li.textContent.trim();
+            returnToBack(deleteTodo);
+            li.setAttribute("style","display:none !important;");
+            setTimeout(function(){
+              if(li.hasAttribute("style")){
+                deleteTodoFromStorage(deleteTodo);
+                li.remove();
+                showAlert("success","Todo başarılı olarak silindi...");
+              }
+            },5000);
+          }
+
+          if(e.target.id == "returnButton"){
+            const allLi = document.querySelectorAll(".list-group-item");
+            if(e.target.title == "[[AllTodos]]"){
+              allLi.forEach(function(li){
+                li.removeAttribute("style");
+              });
+              showAlert("warning","Todolar Geri Alındı...");
+            }else{
+              allLi.forEach(function(li){
+                if(li.textContent.trim() == e.target.title){
+                  li.removeAttribute("style");
+                  e.target.remove();
+                  showAlert("warning","Todo Geri Alındı...");
+                }
+              });
+            }
+            
+          }
+        }
+
+        function clearAllTodos(e){
+            if(confirm("Tüm taskları silmek isteğinize emin misiniz?")){
+
+              const allLi = document.querySelectorAll(".list-group-item");
+              allLi.forEach(function(li){
+                li.setAttribute("style","display:none !important;");
+              });
+              returnToBack("[[AllTodos]]");
+              setTimeout(function(){
+                let count = 0;
+                allLi.forEach(function(li){
+                  if(li.hasAttribute("style")){
+                    count ++;
+                  deleteTodoFromStorage(li.textContent);
+                  li.remove();
+                }
+                });
+                if(count > 0){
+                  showAlert("success","Tüm tasklar silindi...");
+                }
+              },5000);
+              
+              
+            }else{
+              showAlert("warning","Herhangi bir değişiklik yapılmadı!");
+            }
+        }
+
+        function filterTodos(e){
+            const filterValue = e.target.value.toLowerCase();
+            const listItems = document.querySelectorAll(".list-group-item");
+            listItems.forEach(function(listItem){
+                const text = listItem.textContent.toLowerCase();
+                if(text.indexOf(filterValue) === -1){
+                    listItem.setAttribute("style","display:none !important;");
+                    console.log(listItem);
+                }else{
+                    listItem.setAttribute("style","display:block ;");
+                }
+            });
+        }
+
+      
+
+        function checkTodoFromStorage(newTodo){
+          let flag = 0;
+          let todos = getTodosFromStorage();
+          todos.forEach(function(todo){
+            if(todo.toLowerCase() === newTodo.toLowerCase()){
+              flag = 1;
+            }
+          });
+          return flag;
+        }
+
+        function getTodosFromStorage(){
+          let todos;
+          if(localStorage.getItem("todos") === null){
+            todos = [];
+          }else{
+            todos = JSON.parse(localStorage.getItem("todos"));
+          }
+          return todos;
+        }
+
+        function deleteTodoFromStorage(deleteTodo){
+          let todos = getTodosFromStorage();
+          todos.forEach(function(todo,index){
+            if(todo == deleteTodo){
+              todos.splice(index,1);
+            }
+          });
+          localStorage.setItem("todos",JSON.stringify(todos));
+        }
+
+        function addTodoToStorage(newTodo){
+          let todos = getTodosFromStorage();
+          todos.push(newTodo);
+          localStorage.setItem("todos",JSON.stringify(todos));
+        }
+
+        function addTodoToUI(newTodo){
+          /*
+          <li class="list-group-item d-flex justify-content-between">
+              Todo 1
+              <a href="#" class="delete-item">
+                <i class="fa fa-remove"></i>
+              </a>
+            </li>
+          */
+         const listItem = document.createElement("li");
+         listItem.className = "list-group-item d-flex justify-content-between";
+         const link = document.createElement("a");
+         link.className = "delete-item";
+         link.href = "#";
+         link.innerHTML = '<i class="fa fa-remove"></i>';
+         listItem.appendChild(document.createTextNode(newTodo));
+         listItem.appendChild(link);
+         todoList.appendChild(listItem);
+
+        }
+
+        function showAlert(type,message){
+          const toastContent = `<div class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true" id="liveToast">
+            <div class="d-flex">
+              <div class="toast-body">
+                ${message}
+              </div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+          </div>`;
+          const showAlertContent = document.getElementById('showAlert');
+          showAlertContent.innerHTML = toastContent;
+          const toastLiveExample = document.getElementById('liveToast');
+          const toast = new bootstrap.Toast(toastLiveExample);
+          toast.show();
+        }
+
+        function returnToBack(deleteTodo){
+          const returnButton = document.createElement("button");
+          returnButton.className = "btn btn-warning";
+          returnButton.type = "button";
+          returnButton.id = "returnButton";
+          returnButton.title = deleteTodo;
+          returnButton.textContent = "Geri Al";
+          secondCardBody.appendChild(returnButton);
+          setTimeout(function(){
+            returnButton.remove();
+          },5000);
+        }
+
+    </script>
+  </body>
+</html>
